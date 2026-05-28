@@ -19,3 +19,4 @@ C:\Users\Vlad\RiderProjects\Coursach4\Coursach4\obj\Debug\net8.0-windows\Coursac
 C:\Users\Vlad\RiderProjects\Coursach4\Coursach4\obj\Debug\net8.0-windows\ref\Coursach4.dll
 C:\Users\Vlad\RiderProjects\Coursach4\Coursach4\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Users\Vlad\RiderProjects\Coursach4\Coursach4\obj\Debug\net8.0-windows\Coursach4_MarkupCompile.lref
+C:\Users\Vlad\RiderProjects\Coursach4\Coursach4\obj\Debug\net8.0-windows\Coursach4.sourcelink.json

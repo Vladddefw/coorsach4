@@ -102,10 +102,10 @@ public sealed class SimulationEngine
             var kioskIndex = NextRandom(0, _config.KioskCount);
             var queue = _queues[kioskIndex];
 
-            if (queue.Count > _config.QueueLimit)
+            if (queue.Count >= _config.QueueLimit)
             {
                 Interlocked.Increment(ref _rejectedByQueueCount);
-                Emit("Відмова через чергу", kioskIndex + 1, $"Фанат #{fan.Id} пішов: черга більша за {_config.QueueLimit}");
+                Emit("Відмова через чергу", kioskIndex + 1, $"Фанат #{fan.Id} пішов: черга не менше за {_config.QueueLimit}");
                 continue;
             }
 
@@ -142,13 +142,6 @@ public sealed class SimulationEngine
             if (!queue.TryDequeue(out var fan))
             {
                 continue;
-            }
-
-            PushSnapshot(kioskIndex, KioskPhase.FinishingCurrentCut, _config.CutMinutes);
-            await SimulatePhaseAsync(kioskIndex, KioskPhase.FinishingCurrentCut, _config.CutMinutes, token);
-            lock (_kioskLocks[kioskIndex])
-            {
-                _states[kioskIndex].VegetablePortions += 1;
             }
 
             var serviceMinutes = NextRandom(_config.ServiceMinMinutes, _config.ServiceMaxMinutes + 1);
@@ -238,12 +231,21 @@ public sealed class SimulationEngine
 
     private void Emit(string eventType, int? kioskId, string message)
     {
+        var kind = eventType switch
+        {
+            "Успішне замовлення" => SimulationEventKind.Success,
+            "Відмова через овочі" => SimulationEventKind.Rejected,
+            "Відмова через чергу" => SimulationEventKind.Rejected,
+            _ => SimulationEventKind.Neutral
+        };
+
         EventOccurred?.Invoke(new SimulationEvent(
             DateTime.UtcNow,
             DateTime.UtcNow - StartUtc,
             kioskId,
             eventType,
-            message));
+            message,
+            kind));
     }
 
     private sealed class KioskWorkerState

@@ -10,6 +10,5 @@ public sealed class SimulationConfig
     public int InitialVegetablePortions { get; init; } = 4;
     public int FanArrivalMinMinutes { get; init; } = 1;
     public int FanArrivalMaxMinutes { get; init; } = 3;
-    public int TimeScaleMsPerMinute { get; init; } = 6_000;
+    public int TimeScaleMsPerMinute { get; init; } = 6_00;
 }
-

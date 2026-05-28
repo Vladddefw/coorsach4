@@ -84,6 +84,20 @@
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   ItemsSource="{Binding Events}">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Kind}" Value="Rejected">
+                            <Setter Property="Background" Value="#FFF9D6D5"/>
+                            <Setter Property="Foreground" Value="#FF8B0000"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Kind}" Value="Success">
+                            <Setter Property="Background" Value="#FFDDF3DD"/>
+                            <Setter Property="Foreground" Value="#FF0B4F0B"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="UTC" Binding="{Binding TimestampUtc, StringFormat=HH:mm:ss.fff}" Width="150"/>
                 <DataGridTextColumn Header="Від старту" Binding="{Binding SinceStart, StringFormat=mm\\:ss}" Width="100"/>
