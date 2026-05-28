@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows;
+using System.Diagnostics;
 using Coursach4.Models;
 using Coursach4.Services;
 using Microsoft.Win32;
@@ -9,7 +10,7 @@ namespace Coursach4.ViewModels;
 public sealed class MainViewModel : ObservableObject
 {
     private readonly SimulationEngine _engine;
-    private readonly CsvExportService _csvExport;
+    private readonly HtmlExportService _htmlExport;
     private readonly List<SimulationEvent> _eventBuffer = new();
 
     private bool _isRunning;
@@ -22,7 +23,7 @@ public sealed class MainViewModel : ObservableObject
     {
         var config = new SimulationConfig();
         _engine = new SimulationEngine(config);
-        _csvExport = new CsvExportService();
+        _htmlExport = new HtmlExportService();
 
         for (var i = 1; i <= config.KioskCount; i++)
         {
@@ -39,7 +40,7 @@ public sealed class MainViewModel : ObservableObject
         StartCommand = new RelayCommand(Start, () => !IsRunning);
         StopCommand = new RelayCommand(async () => await StopAsync(), () => IsRunning);
         ResetCommand = new RelayCommand(Reset, () => !IsRunning);
-        ExportCsvCommand = new RelayCommand(ExportCsv);
+        ExportCsvCommand = new RelayCommand(ExportHtml);
         ClearLogCommand = new RelayCommand(ClearVisualLog);
     }
 
@@ -124,11 +125,11 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private void ExportCsv()
+    private void ExportHtml()
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Select folder for CSV export"
+            Title = "Оберіть папку для HTML звіту"
         };
 
         if (dialog.ShowDialog() != true)
@@ -136,8 +137,20 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        var paths = _csvExport.Export(dialog.FolderName, _engine.Metrics, _eventBuffer, RejectedByQueue);
-        MessageBox.Show($"Exported:\n{paths.summaryPath}\n{paths.eventsPath}", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+        var (htmlPath, jsonPath) = _htmlExport.Export(dialog.FolderName, _engine.Metrics, _eventBuffer, RejectedByQueue);
+        OpenInBrowser(htmlPath);
+        MessageBox.Show($"Звіт збережено:\n{htmlPath}\n{jsonPath}", "HTML експорт", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static void OpenInBrowser(string path)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        };
+
+        Process.Start(startInfo);
     }
 
     private void ClearVisualLog()
@@ -175,4 +188,3 @@ public sealed class MainViewModel : ObservableObject
         });
     }
 }
-
