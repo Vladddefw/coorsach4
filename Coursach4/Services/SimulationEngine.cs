@@ -6,15 +6,20 @@ namespace Coursach4.Services;
 public sealed class SimulationEngine
 {
     private readonly SimulationConfig _config;
+    // Черги й сигнали для кожного кіоска.
     private readonly ConcurrentQueue<Fan>[] _queues;
     private readonly SemaphoreSlim[] _queueSignals;
+    // Лок на кожен кіоск для захисту спільного стану.
     private readonly object[] _kioskLocks;
+    // Стан і метрики по кіосках.
     private readonly KioskWorkerState[] _states;
     private readonly KioskMetrics[] _metrics;
+    // Random не потокобезпечний, тому доступ під локом.
     private readonly Random _random = new();
     private readonly object _randomLock = new();
 
     private CancellationTokenSource? _cts;
+    // Воркери: по одному на кіоск + генератор фанатів.
     private readonly List<Task> _workers = new();
     private Task? _fanGeneratorTask;
     private int _fanId;
@@ -29,6 +34,7 @@ public sealed class SimulationEngine
     public SimulationEngine(SimulationConfig config)
     {
         _config = config;
+        // Ініціалізація структур для кожного кіоска.
         _queues = Enumerable.Range(0, config.KioskCount).Select(_ => new ConcurrentQueue<Fan>()).ToArray();
         _queueSignals = Enumerable.Range(0, config.KioskCount).Select(_ => new SemaphoreSlim(0)).ToArray();
         _kioskLocks = Enumerable.Range(0, config.KioskCount).Select(_ => new object()).ToArray();
@@ -52,12 +58,14 @@ public sealed class SimulationEngine
         Volatile.Write(ref _rejectedByQueueCount, 0);
         _workers.Clear();
 
+        // Старт воркера для кожного кіоска.
         for (var i = 0; i < _config.KioskCount; i++)
         {
             var kioskIndex = i;
             _workers.Add(Task.Run(() => RunKioskAsync(kioskIndex, _cts.Token)));
         }
 
+        // Старт генератора фанатів.
         _fanGeneratorTask = Task.Run(() => RunFanGeneratorAsync(_cts.Token));
         Emit("Система", null, "Симуляцію запущено");
     }
@@ -69,6 +77,7 @@ public sealed class SimulationEngine
             return;
         }
 
+        // Сигнал зупинки для всіх циклів і очікування завершення.
         _cts.Cancel();
 
         try
@@ -91,6 +100,7 @@ public sealed class SimulationEngine
         }
     }
 
+    // Генерує фанатів і розподіляє їх по чергах кіосків.
     private async Task RunFanGeneratorAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -117,6 +127,7 @@ public sealed class SimulationEngine
         }
     }
 
+    // Цикл кіоска: готує овочі в простої, обслуговує фанатів з черги.
     private async Task RunKioskAsync(int kioskIndex, CancellationToken token)
     {
         var queue = _queues[kioskIndex];
@@ -138,6 +149,7 @@ public sealed class SimulationEngine
                 continue;
             }
 
+            // Очікування, що фанат буде доданий до черги.
             await signal.WaitAsync(token);
             if (!queue.TryDequeue(out var fan))
             {
@@ -176,6 +188,7 @@ public sealed class SimulationEngine
         }
     }
 
+    // Симулює фазу, чекаючи малими кроками й оновлюючи залишок часу.
     private async Task SimulatePhaseAsync(int kioskIndex, KioskPhase phase, int phaseMinutes, CancellationToken token)
     {
         var remainingMs = MinutesToDelayMs(phaseMinutes);
@@ -197,11 +210,13 @@ public sealed class SimulationEngine
         }
     }
 
+    // Масштабує логічні хвилини в реальний час (мс).
     private int MinutesToDelayMs(int minutes)
     {
         return Math.Max(1, minutes * _config.TimeScaleMsPerMinute);
     }
 
+    // Надсилає знімок стану для UI.
     private void PushSnapshot(int kioskIndex, KioskPhase phase, double remainingSeconds)
     {
         var state = _states[kioskIndex];
@@ -221,6 +236,7 @@ public sealed class SimulationEngine
             state.ServedFans > 0 ? state.TotalWait.TotalSeconds / state.ServedFans : 0));
     }
 
+    // Потокобезпечний доступ до Random.
     private int NextRandom(int minInclusive, int maxExclusive)
     {
         lock (_randomLock)
@@ -229,6 +245,7 @@ public sealed class SimulationEngine
         }
     }
 
+    // Публікує подію для логу/візуалізації.
     private void Emit(string eventType, int? kioskId, string message)
     {
         var kind = eventType switch
